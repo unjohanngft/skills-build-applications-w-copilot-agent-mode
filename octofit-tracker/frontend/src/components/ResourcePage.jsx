@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchCollection } from '../api.js'
 import ResourceTable from './ResourceTable.jsx'
 
-export default function ResourcePage({ component, title, description }) {
+export default function ResourcePage({ endpoint, title, description }) {
   const [rows, setRows] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -10,7 +10,7 @@ export default function ResourcePage({ component, title, description }) {
   useEffect(() => {
     let active = true
 
-    fetchCollection(component)
+    fetchCollection(endpoint)
       .then((items) => {
         if (active) setRows(items)
       })
@@ -22,7 +22,7 @@ export default function ResourcePage({ component, title, description }) {
       })
 
     return () => { active = false }
-  }, [component])
+  }, [endpoint])
 
   return (
     <section className="resource-page">

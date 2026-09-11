@@ -10,10 +10,9 @@ export default function Users() {
   const [rows, setRows] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
-  const endpoint = `${API_BASE_URL}/api/users/`
 
   useEffect(() => {
-    fetch(endpoint)
+    fetch(`${API_BASE_URL}/api/users/`)
       .then((response) => {
         if (!response.ok) throw new Error(`Users request failed (${response.status})`)
         return response.json()
@@ -21,7 +20,7 @@ export default function Users() {
       .then((payload) => setRows(normalizeCollection(payload)))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false))
-  }, [endpoint])
+  }, [])
 
   return <ResourcePage rows={rows} error={error} loading={loading} title="Users" description="Browse the people taking part in OctoFit." />
 }

@@ -10,10 +10,9 @@ export default function Activities() {
   const [rows, setRows] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
-  const endpoint = `${API_BASE_URL}/api/activities/`
 
   useEffect(() => {
-    fetch(endpoint)
+    fetch(`${API_BASE_URL}/api/activities/`)
       .then((response) => {
         if (!response.ok) throw new Error(`Activities request failed (${response.status})`)
         return response.json()
@@ -21,7 +20,7 @@ export default function Activities() {
       .then((payload) => setRows(normalizeCollection(payload)))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false))
-  }, [endpoint])
+  }, [])
 
   return <ResourcePage rows={rows} error={error} loading={loading} title="Activities" description="Review activity logged by the OctoFit community." />
 }

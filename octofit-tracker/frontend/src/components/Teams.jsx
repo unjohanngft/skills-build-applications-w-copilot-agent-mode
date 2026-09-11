@@ -10,10 +10,9 @@ export default function Teams() {
   const [rows, setRows] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
-  const endpoint = `${API_BASE_URL}/api/teams/`
 
   useEffect(() => {
-    fetch(endpoint)
+    fetch(`${API_BASE_URL}/api/teams/`)
       .then((response) => {
         if (!response.ok) throw new Error(`Teams request failed (${response.status})`)
         return response.json()
@@ -21,7 +20,7 @@ export default function Teams() {
       .then((payload) => setRows(normalizeCollection(payload)))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false))
-  }, [endpoint])
+  }, [])
 
   return <ResourcePage rows={rows} error={error} loading={loading} title="Teams" description="Find teams and their current members." />
 }

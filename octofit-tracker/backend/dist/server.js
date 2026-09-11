@@ -1,6 +1,6 @@
 import express from 'express';
-import { randomUUID } from 'node:crypto';
 import db from './config/database.js';
+import { Activity, LeaderboardEntry, Team, User, Workout } from './models/index.js';
 const app = express();
 const port = Number(process.env.PORT) || 8000;
 const getApiBaseUrl = () => {
@@ -18,68 +18,64 @@ app.use((_request, response, next) => {
     }
     next();
 });
-const users = [
-    { id: 'user-1', name: 'Ava Johnson', email: 'ava@example.com', fitnessLevel: 'intermediate' },
-    { id: 'user-2', name: 'Noah Patel', email: 'noah@example.com', fitnessLevel: 'advanced' },
-];
-const teams = [
-    { id: 'team-1', name: 'Storm Squad', members: ['user-1', 'user-2'], goal: 'Weekly 200k steps' },
-    { id: 'team-2', name: 'Summit Crew', members: ['user-1'], goal: 'Trail challenge' },
-];
-const activities = [
-    { id: 'activity-1', userId: 'user-1', type: 'run', duration: 35, calories: 420, date: '2026-09-11' },
-    { id: 'activity-2', userId: 'user-2', type: 'strength', duration: 50, calories: 610, date: '2026-09-10' },
-];
-const leaderboard = [
-    { id: 'leaderboard-1', userId: 'user-2', username: 'Noah Patel', score: 9800 },
-    { id: 'leaderboard-2', userId: 'user-1', username: 'Ava Johnson', score: 8740 },
-];
-const workouts = [
-    { id: 'workout-1', title: 'HIIT Cardio Blast', level: 'intermediate', duration: 25, focus: 'endurance' },
-    { id: 'workout-2', title: 'Core Strength Circuit', level: 'beginner', duration: 20, focus: 'stability' },
-];
-const createCrudHandlers = (collection, basePath) => {
-    app.get(basePath, (_request, response) => {
-        response.json(collection);
-    });
-    app.get(`${basePath}:id`, (request, response) => {
-        const item = collection.find((entry) => entry.id === request.params.id);
-        if (!item) {
-            response.status(404).json({ message: `${basePath.replace('/api/', '').slice(0, -1)} not found` });
-            return;
+const createCrudHandlers = (model, basePath) => {
+    app.get(basePath, async (_request, response) => {
+        try {
+            const items = await model.find({}).lean();
+            response.json(items);
         }
-        response.json(item);
-    });
-    app.post(basePath, (request, response) => {
-        const item = {
-            ...request.body,
-            id: randomUUID(),
-        };
-        collection.push(item);
-        response.status(201).json(item);
-    });
-    app.put(`${basePath}:id`, (request, response) => {
-        const itemIndex = collection.findIndex((entry) => entry.id === request.params.id);
-        if (itemIndex === -1) {
-            response.status(404).json({ message: `${basePath.replace('/api/', '').slice(0, -1)} not found` });
-            return;
+        catch (error) {
+            response.status(500).json({ message: 'Failed to fetch records', error });
         }
-        const updatedItem = {
-            ...collection[itemIndex],
-            ...request.body,
-            id: request.params.id,
-        };
-        collection[itemIndex] = updatedItem;
-        response.json(updatedItem);
     });
-    app.delete(`${basePath}:id`, (request, response) => {
-        const itemIndex = collection.findIndex((entry) => entry.id === request.params.id);
-        if (itemIndex === -1) {
-            response.status(404).json({ message: `${basePath.replace('/api/', '').slice(0, -1)} not found` });
-            return;
+    app.get(`${basePath}:id`, async (request, response) => {
+        try {
+            const item = await model.findOne({ id: request.params.id }).lean();
+            if (!item) {
+                response.status(404).json({ message: `${basePath.replace('/api/', '').slice(0, -1)} not found` });
+                return;
+            }
+            response.json(item);
         }
-        const [deletedItem] = collection.splice(itemIndex, 1);
-        response.json({ deleted: deletedItem });
+        catch (error) {
+            response.status(500).json({ message: 'Failed to fetch record', error });
+        }
+    });
+    app.post(basePath, async (request, response) => {
+        try {
+            const payload = { ...request.body };
+            const item = await model.create(payload);
+            response.status(201).json(item.toJSON ? item.toJSON() : item);
+        }
+        catch (error) {
+            response.status(400).json({ message: 'Failed to create record', error });
+        }
+    });
+    app.put(`${basePath}:id`, async (request, response) => {
+        try {
+            const updatedItem = await model.findOneAndUpdate({ id: request.params.id }, { $set: request.body }, { new: true, runValidators: true });
+            if (!updatedItem) {
+                response.status(404).json({ message: `${basePath.replace('/api/', '').slice(0, -1)} not found` });
+                return;
+            }
+            response.json(updatedItem.toJSON ? updatedItem.toJSON() : updatedItem);
+        }
+        catch (error) {
+            response.status(400).json({ message: 'Failed to update record', error });
+        }
+    });
+    app.delete(`${basePath}:id`, async (request, response) => {
+        try {
+            const deletedItem = await model.findOneAndDelete({ id: request.params.id });
+            if (!deletedItem) {
+                response.status(404).json({ message: `${basePath.replace('/api/', '').slice(0, -1)} not found` });
+                return;
+            }
+            response.json({ deleted: deletedItem.toJSON ? deletedItem.toJSON() : deletedItem });
+        }
+        catch (error) {
+            response.status(400).json({ message: 'Failed to delete record', error });
+        }
     });
 };
 app.get('/api/health', (_request, response) => {
@@ -88,11 +84,11 @@ app.get('/api/health', (_request, response) => {
 app.get('/api/config', (_request, response) => {
     response.json({ apiBaseUrl: getApiBaseUrl(), port });
 });
-createCrudHandlers(users, '/api/users/');
-createCrudHandlers(teams, '/api/teams/');
-createCrudHandlers(activities, '/api/activities/');
-createCrudHandlers(leaderboard, '/api/leaderboard/');
-createCrudHandlers(workouts, '/api/workouts/');
+createCrudHandlers(User, '/api/users/');
+createCrudHandlers(Team, '/api/teams/');
+createCrudHandlers(Activity, '/api/activities/');
+createCrudHandlers(LeaderboardEntry, '/api/leaderboard/');
+createCrudHandlers(Workout, '/api/workouts/');
 app.listen(port, () => {
     console.log(`OctoFit API listening on port ${port}`);
     console.log(`API base URL: ${getApiBaseUrl()}`);

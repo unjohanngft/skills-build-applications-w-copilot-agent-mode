@@ -14,7 +14,10 @@ export default function Teams() {
 
   useEffect(() => {
     fetch(endpoint)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error(`Teams request failed (${response.status})`)
+        return response.json()
+      })
       .then((payload) => setRows(normalizeCollection(payload)))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false))

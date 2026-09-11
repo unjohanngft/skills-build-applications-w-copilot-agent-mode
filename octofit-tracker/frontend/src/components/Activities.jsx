@@ -14,7 +14,10 @@ export default function Activities() {
 
   useEffect(() => {
     fetch(endpoint)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error(`Activities request failed (${response.status})`)
+        return response.json()
+      })
       .then((payload) => setRows(normalizeCollection(payload)))
       .catch((requestError) => setError(requestError.message))
       .finally(() => setLoading(false))
